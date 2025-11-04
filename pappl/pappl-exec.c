@@ -275,83 +275,9 @@ main(int  argc,				// I - Number of command-line arguments
     return (usage(stderr));
   }
 
-#if !_WIN32
-  // Validate any user or group
-  if (user)
-  {
-    struct passwd *pw;			// User account information
-
-    if (isdigit(*user & 255))
-    {
-      // Numeric UID
-      char *ptr;			// Pointer into UID
-      long val = strtol(user, &ptr, 10);// UID value
-
-      if (val < 0 || *ptr)
-      {
-	_papplLocPrintf(stderr, _PAPPL_LOC("pappl-exec: Invalid user ID '%s'."), user);
-	return (1);
-      }
-
-      uid = (uid_t)val;
-    }
-    else if ((pw = getpwnam(user)) == NULL)
-    {
-      // Named user not found...
-      _papplLocPrintf(stderr, _PAPPL_LOC("pappl-exec: User '%s' not found."), user);
-      return (1);
-    }
-    else
-    {
-      // Use the UID and GID for the named user...
-      uid = pw->pw_uid;
-      gid = pw->pw_gid;
-    }
-  }
-
-  if (group)
-  {
-    struct group *grp;			// Group information
-
-    if (isdigit(*group & 255))
-    {
-      // Numeric GID
-      char *ptr;			// Pointer into GID
-      long val = strtol(group, &ptr, 10);// UID value
-
-      if (val < 0 || *ptr)
-      {
-	_papplLocPrintf(stderr, _PAPPL_LOC("pappl-exec: Invalid group ID '%s'."), group);
-	return (1);
-      }
-
-      gid = (gid_t)val;
-    }
-    else if ((grp = getgrnam(group)) == NULL)
-    {
-      // Group not found...
-      _papplLocPrintf(stderr, _PAPPL_LOC("pappl-exec: Group '%s' not found."), user);
-      return (1);
-    }
-    else
-    {
-      // Use the GID for the named group...
-      gid = grp->gr_gid;
-    }
-  }
-#endif // !_WIN32
 
   // Load any restrictions...
   load_profile(program_args, allow_networking, read_exec, read_only, read_write);
-
-#if !_WIN32
-  // Change user/group as needed...
-  if (uid)
-    setuid(uid);
-
-  if (gid)
-    setgid(uid);
-#endif // !_WIN32
 
   // Execute the program...
   execvp(program_args[0], program_args);

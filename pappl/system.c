@@ -303,7 +303,6 @@ papplSystemDelete(
     return;
 
   _papplSystemUnregisterDNSSDNoLock(system);
-  _papplSystemStopAllExtCommands(system);
 
   cupsArrayDelete(system->printers);
 

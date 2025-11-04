@@ -14,8 +14,6 @@
 #  ifdef __APPLE__
 #    include <sys/param.h>
 #    include <sys/mount.h>
-#  elif !_WIN32
-#    include <sys/statfs.h>
 #  endif // __APPLE__
 #  include "base-private.h"
 #  include "device.h"

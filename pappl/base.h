@@ -30,7 +30,7 @@ typedef int uid_t;
 #  ifdef __cplusplus
 extern "C" {
 #  endif // __cplusplus
-
+#include <cups/zephyr-compat.h>
 
 //
 // PAPPL API version definitions...

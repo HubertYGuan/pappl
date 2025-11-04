@@ -50,50 +50,7 @@ bool					// O - `true` on success and `false` on failure
 papplCreatePipe(int  *fds,		// O - Array of 2 file descriptors
                 bool text)		// I - `true` for a text pipe, `false` for binary data
 {
-  // Range check input...
-  if (!fds)
-    return (false);
-
-#if _WIN32
-  HANDLE	inhandle,		// Input handle
-		outhandle;		// Output handle
-  SECURITY_ATTRIBUTES attrs;		// Attributes
-
-
-  // Make sure the pipe can be "inherited" by a child process...
-  attrs.nLength              = sizeof(attrs);
-  attrs.lpSecurityDescriptor = NULL;
-  attrs.bInheritHandle       = TRUE;
-
-  // Create the pipe handles...
-  if (!CreatePipe(&inhandle, &outhandle, &attrs, /*size*/0))
-    return (false);
-
-  // Convert to file descriptors...
-  if (text)
-  {
-    fds[0] = _open_osfhandle((intptr_t)inhandle, _O_RDONLY | _O_TEXT);
-    fds[1] = _open_osfhandle((intptr_t)outhandle, _O_TEXT);
-  }
-  else
-  {
-    fds[0] = _open_osfhandle((intptr_t)inhandle, _O_RDONLY);
-    fds[1] = _open_osfhandle((intptr_t)outhandle, /*flags*/0);
-  }
-
-#else
-  (void)text;
-
-  // Create the pipe...
-  if (pipe(fds))
-    return (false);
-
-  // Set the "close on exec" flag...
-  fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC);
-  fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC);
-#endif // _WIN32
-
-  return (true);
+  return false;
 }
 
 

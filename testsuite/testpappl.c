@@ -56,6 +56,7 @@
 
 #include <pappl/system-private.h>
 #include <cups/dir.h>
+#include <cups/cups-private.h>
 #include "testpappl.h"
 #include "test.h"
 #include <stdlib.h>
@@ -143,6 +144,7 @@ static char		output_device_uri[1024] = "";
 static char		output_directory[1024] = "";
 					// Output directory
 
+static pappl_network_t	*test_networks;
 
 //
 // Local types...
@@ -810,6 +812,13 @@ main(int  argc,				// I - Number of command-line arguments
   }
 
   cupsCopyString(output_directory, outdir, sizeof(output_directory));
+
+  test_networks = CUPS_LARGE_CALLOC(2, sizeof(pappl_network_t));
+  if (test_networks == NULL)
+  {
+    LOG_INF("Failed to allocate test_networks");
+  }
+  LOG_INF("Allocated test_networks");
 
   // Initialize the system and any printers...
   system = papplSystemCreate(soptions, name ? name : "Test System", port, "_print,_universal", spool, log, level, auth, tls_only);
@@ -4252,8 +4261,6 @@ test_image_files(
 //
 // 'test_network_get_cb()' - Get test networks.
 //
-
-static pappl_network_t	test_networks[2];
 
 static size_t				// O - Number of networks
 test_network_get_cb(

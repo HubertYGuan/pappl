@@ -425,6 +425,7 @@ _papplMainloopConnect(
     const char *base_name,		// I - Printer application name
     bool       auto_start)		// I - `true` to start server if not running
 {
+#ifndef HAVE_ZEPHYR_MDNS
   http_t	*http;			// HTTP connection
   char		sockname[1024];		// Socket filename
 
@@ -499,6 +500,10 @@ _papplMainloopConnect(
   }
 
   return (http);
+#else
+  return (NULL);
+#endif
+
 }
 
 

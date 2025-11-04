@@ -17,29 +17,12 @@
 #  include <syslog.h>
 #endif // !_WIN32
 
-
 //
 // Local functions...
 //
 
 static void	rotate_log_no_lock(pappl_system_t *system);
 static void	write_log_no_lock(pappl_system_t *system, pappl_loglevel_t level, const char *message, va_list ap);
-
-
-//
-// Local globals...
-//
-
-#if !_WIN32
-static const int	syslevels[] =	// Mapping of log levels to syslog
-{
-  LOG_DEBUG | LOG_PID | LOG_LPR,
-  LOG_INFO | LOG_PID | LOG_LPR,
-  LOG_WARNING | LOG_PID | LOG_LPR,
-  LOG_ERR | LOG_PID | LOG_LPR,
-  LOG_CRIT | LOG_PID | LOG_LPR
-};
-#endif // !_WIN32
 
 
 //
@@ -66,41 +49,15 @@ papplLog(pappl_system_t   *system,	// I - System
          ...)				// I - Additional arguments as needed
 {
   va_list	ap;			// Pointer to arguments
-
+  char buffer[1024];
 
   if (!message)
     return;
 
-  if (!system)
-  {
-    if (level >= PAPPL_LOGLEVEL_WARN)
-    {
-      va_start(ap, message);
-      vfprintf(stderr, message, ap);
-      putc('\n', stderr);
-      va_end(ap);
-    }
-
-    return;
-  }
-
-  if (level < papplSystemGetLogLevel(system))
-    return;
-
   va_start(ap, message);
 
-#if !_WIN32
-  if (system->log_is_syslog)
-  {
-    vsyslog(syslevels[level], message, ap);
-  }
-  else
-#endif // !_WIN32
-  {
-    cupsMutexLock(&system->log_mutex);
-    write_log_no_lock(system, level, message, ap);
-    cupsMutexUnlock(&system->log_mutex);
-  }
+  snprintf(buffer, sizeof(buffer), message, ap);
+  LOG_INF("%s", buffer);
 
   va_end(ap);
 }
@@ -178,45 +135,6 @@ _papplLogAttributes(
 // contain control characters.
 //
 
-void
-papplLogClient(
-    pappl_client_t   *client,		// I - Client
-    pappl_loglevel_t level,		// I - Log level
-    const char       *message,		// I - Printf-style message string
-    ...)				// I - Additional arguments as needed
-{
-  char		cmessage[1024];		// Message with client prefix
-  va_list	ap;			// Pointer to arguments
-  pappl_system_t *system;		// System
-
-
-  if (!client || !message)
-    return;
-
-  system = client->system;
-
-  if (level < papplSystemGetLogLevel(system))
-    return;
-
-  snprintf(cmessage, sizeof(cmessage), "[Client %d] %s", client->number, message);
-  va_start(ap, message);
-
-#if !_WIN32
-  if (system->log_is_syslog)
-  {
-    vsyslog(syslevels[level], cmessage, ap);
-  }
-  else
-#endif // !_WIN32
-  {
-    cupsMutexLock(&system->log_mutex);
-    write_log_no_lock(system, level, cmessage, ap);
-    cupsMutexUnlock(&system->log_mutex);
-  }
-
-  va_end(ap);
-}
-
 
 //
 // 'papplLogDevice()' - Log a device error for the system...
@@ -224,17 +142,6 @@ papplLogClient(
 // This function sends a device error message to the system's log file.
 //
 
-void
-papplLogDevice(
-    void       *data,			// I - System
-    const char *message)		// I - Message
-{
-  pappl_system_t	*system = (pappl_system_t *)data;
-					// System
-
-
-  papplLog(system, PAPPL_LOGLEVEL_ERROR, "[Device] %s", message);
-}
 
 
 //
@@ -253,48 +160,6 @@ papplLogDevice(
 // logged using the "%c" and "%s" format specifiers are sanitized to not
 // contain control characters.
 //
-
-void
-papplLogJob(
-    pappl_job_t      *job,		// I - Job
-    pappl_loglevel_t level,		// I - Log level
-    const char       *message,		// I - Printf-style message string
-    ...)				// I - Additional arguments as needed
-{
-  char		jmessage[1024];		// Message with job prefix
-  va_list	ap;			// Pointer to arguments
-  pappl_system_t *system;		// System
-
-
-  if (!job || !message)
-    return;
-
-  system = job->system;
-
-  if (level < papplSystemGetLogLevel(system))
-    return;
-
-  // Prefix the message...
-  snprintf(jmessage, sizeof(jmessage), "%s %s", job->log_prefix, message);
-
-  // Write the log message...
-  va_start(ap, message);
-
-#if !_WIN32
-  if (system->log_is_syslog)
-  {
-    vsyslog(syslevels[level], jmessage, ap);
-  }
-  else
-#endif // !_WIN32
-  {
-    cupsMutexLock(&system->log_mutex);
-    write_log_no_lock(system, level, jmessage, ap);
-    cupsMutexUnlock(&system->log_mutex);
-  }
-
-  va_end(ap);
-}
 
 
 //
@@ -434,48 +299,6 @@ _papplLogOpenNoLock(
 // logged using the "%c" and "%s" format specifiers are sanitized to not
 // contain control characters.
 //
-
-void
-papplLogPrinter(
-    pappl_printer_t  *printer,		// I - Printer
-    pappl_loglevel_t level,		// I - Log level
-    const char       *message,		// I - Printf-style message string
-    ...)				// I - Additional arguments as needed
-{
-  char		pmessage[1024];		// Message with printer prefix
-  va_list	ap;			// Pointer to arguments
-  pappl_system_t *system;		// System
-
-
-  if (!printer || !message)
-    return;
-
-  system = printer->system;
-
-  if (level < papplSystemGetLogLevel(system))
-    return;
-
-  // Prefix the message...
-  snprintf(pmessage, sizeof(pmessage), "%s %s", printer->log_prefix, message);
-
-  // Write the log message...
-  va_start(ap, message);
-
-#if !_WIN32
-  if (system->log_is_syslog)
-  {
-    vsyslog(syslevels[level], pmessage, ap);
-  }
-  else
-#endif // !_WIN32
-  {
-    cupsMutexLock(&system->log_mutex);
-    write_log_no_lock(system, level, pmessage, ap);
-    cupsMutexUnlock(&system->log_mutex);
-  }
-
-  va_end(ap);
-}
 
 
 //

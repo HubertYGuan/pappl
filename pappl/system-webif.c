@@ -9,10 +9,6 @@
 //
 
 #include "pappl-private.h"
-#if !_WIN32
-#  include <net/if.h>
-#  include <ifaddrs.h>
-#endif // !_WIN32
 
 
 //
@@ -1442,47 +1438,6 @@ _papplSystemWebSecurity(
                       "      </div>\n"
                       "      <div class=\"row\">\n");
 
-#if !_WIN32
-  if (system->auth_service)
-  {
-    // Show Users pane for group controls
-    papplClientHTMLPrintf(client,
-			  "        <div class=\"col-12\">\n"
-			  "          <h2 class=\"title\">%s</h2>\n", papplClientGetLocString(client, _PAPPL_LOC("Users")));
-
-    papplClientHTMLStartForm(client, client->uri, false);
-
-    papplClientHTMLPrintf(client,
-			  "          <table class=\"form\">\n"
-			  "            <tbody>\n"
-			  "              <tr><th><label for=\"admin_group\">%s:</label></th><td><select name=\"admin_group\"><option value=\"\">%s</option>", papplClientGetLocString(client, _PAPPL_LOC("Admin Group")), papplClientGetLocString(client, _PAPPL_LOC("None")));
-
-    setgrent();
-    while ((grp = getgrent()) != NULL)
-    {
-      papplClientHTMLPrintf(client, "<option%s>%s</option>", (system->admin_group && !strcmp(grp->gr_name, system->admin_group)) ? " selected" : "", grp->gr_name);
-    }
-
-    papplClientHTMLPrintf(client,
-			  "</select></td></tr>\n"
-			  "              <tr><th><label for=\"print_group\">%s:</label></th><td><select name=\"print_group\"><option value=\"\">%s</option>", papplClientGetLocString(client, _PAPPL_LOC("Print Group")), papplClientGetLocString(client, _PAPPL_LOC("None")));
-
-    setgrent();
-    while ((grp = getgrent()) != NULL)
-    {
-      papplClientHTMLPrintf(client, "<option%s>%s</option>", (system->default_print_group && !strcmp(grp->gr_name, system->default_print_group)) ? " selected" : "", grp->gr_name);
-    }
-
-    papplClientHTMLPrintf(client,
-			  "</select></td></tr>\n"
-			  "              <tr><th></th><td><input type=\"submit\" value=\"%s\"></td></tr>\n"
-			  "            </tbody>\n"
-			  "          </table>\n"
-			  "        </div>\n"
-			  "        </form>\n", papplClientGetLocString(client, _PAPPL_LOC("Save Changes")));
-  }
-  else
-#endif // !_WIN32
   if (system->password_hash[0])
   {
     // Show simple access password update form...
@@ -1864,6 +1819,7 @@ _papplSystemWebWiFi(
     pappl_client_t *client,		// I - Client
     pappl_system_t *system)		// I - System
 {
+#ifndef HAVE_ZEPHYR_MDNS
   size_t	i,			// Looping var
 		num_ssids;		// Number of Wi-Fi networks
   cups_dest_t	*ssids;			// Wi-Fi networks
@@ -1964,6 +1920,7 @@ _papplSystemWebWiFi(
 			"      </div>\n", papplClientGetLocString(client, _PAPPL_LOC("Hidden SSID")), papplClientGetLocString(client, _PAPPL_LOC("Rescan")), papplClientGetLocString(client, _PAPPL_LOC("Password")), papplClientGetLocString(client, _PAPPL_LOC("Join Wi-Fi Network")));
 
   system_footer(client);
+#endif
 }
 
 
@@ -1980,144 +1937,8 @@ get_networks(
     size_t          max_networks,	// I - Maximum number of networks
     pappl_network_t *networks)		// I - Networks
 {
-#if _WIN32
-  // TODO: Implement network interface lookups for Windows...
+  // TODO: Implement network interface lookups for Windows (and Zephyr)...
   return (0);
-
-#else
-  size_t	i,			// Looping var
-		num_networks = 0;	// Number of networks
-  struct ifaddrs *addrs,		// List of network addresses
-		*addr;			// Current network address
-  pappl_network_t *network;		// Current network
-
-
-  memset(networks, 0, max_networks * sizeof(pappl_network_t));
-
-  if (getifaddrs(&addrs))
-    return (0);
-
-  for (addr = addrs; addr; addr = addr->ifa_next)
-  {
-    // Skip loopback and point-to-point interfaces...
-    if (addr->ifa_name == NULL || addr->ifa_addr == NULL || (addr->ifa_addr->sa_family != AF_INET && addr->ifa_addr->sa_family != AF_INET6) || (addr->ifa_flags & (IFF_LOOPBACK | IFF_POINTOPOINT)) || !strncmp(addr->ifa_name, "awdl", 4))
-      continue;
-
-    // Find the interface in the list...
-    for (i = num_networks, network = networks; i > 0; i --, network ++)
-    {
-      if (!strcmp(network->name, addr->ifa_name))
-        break;
-    }
-
-    if (i == 0)
-    {
-      // Not found, add it or skip it...
-      if (num_networks < max_networks)
-      {
-        network = networks + num_networks;
-        num_networks ++;
-        cupsCopyString(network->name, addr->ifa_name, sizeof(network->name));
-        cupsCopyString(network->ident, addr->ifa_name, sizeof(network->ident));
-        network->up = (addr->ifa_flags & IFF_UP) != 0;
-      }
-      else
-      {
-        continue;
-      }
-    }
-
-    // Now assign the address information...
-    if (addr->ifa_addr->sa_family == AF_INET)
-    {
-      // IPv4
-      unsigned ipv4 = ntohl(((struct sockaddr_in *)addr->ifa_addr)->sin_addr.s_addr);
-					// IPv4 address
-
-      network->addr4.ipv4 = *((struct sockaddr_in *)addr->ifa_addr);
-      network->mask4.ipv4 = *((struct sockaddr_in *)addr->ifa_netmask);
-
-      // Assume default router is first node in subnet...
-      network->gateway4                 = network->addr4;
-      network->gateway4.ipv4.sin_addr.s_addr = (network->gateway4.ipv4.sin_addr.s_addr & network->mask4.ipv4.sin_addr.s_addr) | htonl(1);
-
-      if ((ipv4 & 0xff000000) == 0x0a000000 || (ipv4 & 0xfff00000) == 0xac100000 || (ipv4 & 0xffff0000) == 0xc0a80000)
-      {
-        // Private use 10.*, 172.16.*, or 192.168.* so this is likely DHCP-assigned
-        if ((ipv4 & 255) < 200)
-          network->config4 = PAPPL_NETCONF_DHCP;
-	else
-          network->config4 = PAPPL_NETCONF_DHCP_MANUAL;
-      }
-      else
-      {
-        // Otherwise assume manual configuration...
-        network->config4 = PAPPL_NETCONF_MANUAL;
-      }
-    }
-    else
-    {
-      // IPv6
-      if (IN6_IS_ADDR_LINKLOCAL(&((struct sockaddr_in6 *)addr->ifa_addr)->sin6_addr))
-      {
-        // Save link-local address...
-        network->linkaddr6.ipv6 = *((struct sockaddr_in6 *)addr->ifa_addr);
-        if (network->config6 == PAPPL_NETCONF_OFF)
-          network->config6 = PAPPL_NETCONF_DHCP;
-      }
-      else
-      {
-        // Save routable address...
-        struct sockaddr_in6 *netmask6 = (struct sockaddr_in6 *)addr->ifa_netmask;
-
-        network->addr6.ipv6 = *((struct sockaddr_in6 *)addr->ifa_addr);
-        for (network->prefix6 = 0, i = 0; i < 16; i ++)
-        {
-          switch (netmask6->sin6_addr.s6_addr[i])
-          {
-            case 0xff :
-                network->prefix6 += 8;
-                break;
-            case 0xfe :
-                network->prefix6 += 7;
-                break;
-            case 0xfc :
-                network->prefix6 += 6;
-                break;
-            case 0xf8 :
-                network->prefix6 += 5;
-                break;
-            case 0xf0 :
-                network->prefix6 += 4;
-                break;
-            case 0xe0 :
-                network->prefix6 += 3;
-                break;
-            case 0xc0 :
-                network->prefix6 += 2;
-                break;
-            case 0x80 :
-                network->prefix6 += 1;
-                break;
-            default :
-                break;
-          }
-
-          if (netmask6->sin6_addr.s6_addr[i] < 0xff)
-            break;
-        }
-
-        if (network->config6 == PAPPL_NETCONF_OFF)
-          network->config6 = PAPPL_NETCONF_MANUAL;
-      }
-    }
-  }
-
-  freeifaddrs(addrs);
-
-  // Return the number of networks we found...
-  return (num_networks);
-#endif // _WIN32
 }
 
 

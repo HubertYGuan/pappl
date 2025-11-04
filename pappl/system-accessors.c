@@ -1949,20 +1949,7 @@ _papplSystemSetHostNameNoLock(
 
   if (value)
   {
-    // Save new hostname...
-#if !defined(__APPLE__) && !_WIN32
-    cups_file_t	*fp;			// Hostname file
 
-    if ((fp = cupsFileOpen("/etc/hostname", "w")) != NULL)
-    {
-      cupsFilePrintf(fp, "%s\n", value);
-      cupsFileClose(fp);
-    }
-#endif // !__APPLE__ && !_WIN32
-
-#if !_WIN32
-    sethostname(value, (int)strlen(value));
-#endif // !_WIN32
   }
   else
   {
@@ -2118,51 +2105,7 @@ papplSystemSetMaxClients(
   if (max_clients == 0)
   {
     // Determine the maximum number of clients to support...
-#ifdef _WIN32
     max_clients = 100;			// Use a default of 100...
-
-#else
-    struct rlimit	file_limits,	// Current file descriptor limits
-			mem_limits;	// Current memory limits
-
-    max_clients = 100;			// Use a default of 100...
-
-    if (!getrlimit(RLIMIT_NOFILE, &file_limits) && !getrlimit(RLIMIT_DATA, &mem_limits))
-    {
-      // Calculate a maximum number of clients...
-      size_t max_files, max_mem;	// Maximum files and memory
-
-      if (file_limits.rlim_cur != file_limits.rlim_max && file_limits.rlim_cur < 65536)
-      {
-        // Try increasing the limit to the maximum allowed...
-        if (file_limits.rlim_max > 65536)
-	  file_limits.rlim_cur = 65536;
-        else
-	  file_limits.rlim_cur = file_limits.rlim_max;
-
-        if (setrlimit(RLIMIT_NOFILE, &file_limits))
-          getrlimit(RLIMIT_NOFILE, &file_limits);
-      }
-
-      // Max clients based on file descriptors is 1/2 the limit...
-      if (file_limits.rlim_cur == RLIM_INFINITY)
-        max_files = 32768;
-      else
-        max_files = (size_t)(file_limits.rlim_cur / 2);
-
-      // Max clients based on memory is 1/64k the limit...
-      if (mem_limits.rlim_cur == RLIM_INFINITY)
-        max_mem = 32768;
-      else
-        max_mem = (size_t)(mem_limits.rlim_cur / 65536);
-
-      // Use min(max_files,max_mem)...
-      if (max_files > max_mem)
-        max_clients = max_mem;
-      else
-        max_clients = max_files;
-    }
-#endif // _WIN32
   }
 
   // Restrict max_clients to <= 32768...
@@ -2202,22 +2145,12 @@ papplSystemSetMaxImageSize(
   if (max_size == 0)
   {
     // By default, limit images to 1/10th available memory...
-#if _WIN32
-    MEMORYSTATUSEX	statex;		// Memory status
-
-    if (GlobalMemoryStatusEx(&statex))
-      max_size = (size_t)statex.ullTotalPhys / 10;
-    else
-      max_size = 16 * 1024 * 1024;
-
+    // Using CONFIG_ESP_SPIRAM_HEAP_SIZE for now, should add a Kconfig for a more general version
+#ifdef CONFIG_ESP_SPIRAM_HEAP_SIZE
+      max_size = CONFIG_ESP_SPIRAM_HEAP_SIZE / 10;
 #else
-    struct rlimit	limit;		// Memory limits
-
-    if (getrlimit(RLIMIT_DATA, &limit))
       max_size = 16 * 1024 * 1024;
-    else
-      max_size = limit.rlim_cur / 10;
-#endif // _WIN32
+#endif
   }
 
   // Don't allow overlarge limits...

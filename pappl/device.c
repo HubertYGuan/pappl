@@ -1126,7 +1126,6 @@ static void
 pappl_create_schemes_no_lock(void)
 {
   _papplDeviceAddFileSchemeNoLock();
-  _papplDeviceAddNetworkSchemesNoLock();
   _papplDeviceAddUSBSchemeNoLock();
 }
 

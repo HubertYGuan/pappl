@@ -1,5 +1,5 @@
 /* icon-sm.png */
-static unsigned char icon_sm_png[] = {
+static unsigned const char icon_sm_png[] = {
 137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,
 0,0,0,48,0,0,0,48,8,3,0,0,0,96,220,9,
 181,0,0,4,14,105,67,67,80,107,67,71,67,111,108,111,
@@ -184,7 +184,7 @@ static unsigned char icon_sm_png[] = {
 
 };
 /* icon-md.png */
-static unsigned char icon_md_png[] = {
+static unsigned const char icon_md_png[] = {
 137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,
 0,0,0,128,0,0,0,128,8,3,0,0,0,244,224,145,
 249,0,0,4,14,105,67,67,80,107,67,71,67,111,108,111,
@@ -423,7 +423,7 @@ static unsigned char icon_md_png[] = {
 
 };
 /* icon-lg.png */
-static unsigned char icon_lg_png[] = {
+static unsigned const char icon_lg_png[] = {
 137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,
 0,0,2,0,0,0,2,0,8,6,0,0,0,244,120,212,
 250,0,0,4,14,105,67,67,80,107,67,71,67,111,108,111,

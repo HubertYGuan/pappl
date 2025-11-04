@@ -12,10 +12,6 @@
 #include "snmp-private.h"
 #include "printer-private.h"
 #include <cups/transcode.h>
-#if !_WIN32
-#  include <ifaddrs.h>
-#  include <net/if.h>
-#endif // !_WIN32
 
 
 //
@@ -316,6 +312,7 @@ pappl_dnssd_get_device(
     const char          *serviceName,	// I - Name of service/device
     const char          *replyDomain)	// I - Service domain
 {
+#ifndef HAVE_ZEPHYR_MDNS
   _pappl_dnssd_dev_t	key,		// Search key
 			*device;	// Device
   char			fullname[1024];	// Full name for query
@@ -383,6 +380,9 @@ pappl_dnssd_get_device(
   }
 
   return (device);
+#else
+  return NULL;
+#endif
 }
 
 
@@ -399,6 +399,8 @@ pappl_dnssd_list(
     void                *err_data)	// I - Data for error callback
 {
   bool			ret = false;	// Return value
+  // DNSSD browsing is not supported by Zephyr
+#ifndef HAVE_ZEPHYR_MDNS
   _pappl_dnssd_devs_t	devices;	// DNS-SD devices
   _pappl_dnssd_dev_t	*device;	// Current DNS-SD device
   char			device_id[1024],// IEEE-1284 device ID
@@ -504,7 +506,7 @@ pappl_dnssd_list(
   // Free memory and return...
   cupsArrayDelete(devices.devices);
   cupsDNSSDDelete(devices.dnssd);
-
+#endif
   return (ret);
 }
 
@@ -1083,49 +1085,7 @@ pappl_snmp_free(_pappl_snmp_dev_t *d)	// I - SNMP device
 static http_addrlist_t *		// O - List of addresses
 pappl_snmp_get_interface_addresses(void)
 {
-#if _WIN32
-  return (NULL);			// TODO: Implement WinSock equivalents
-
-#else
-  struct ifaddrs	*addrs,		// Interface address list
-			*addr;		// Current interface address
-  http_addrlist_t	*first,		// First address in list
-			*last,		// Last address in list
-			*current;	// Current address
-
-
-  // Get a list of network interfaces...
-  if (getifaddrs(&addrs) < 0)
-  {
-    // Unable to get the list...
-    return (NULL);
-  }
-
-  // Copy the broadcast addresses into a list of addresses...
-  for (addr = addrs, first = NULL, last = NULL; addr; addr = addr->ifa_next)
-  {
-    if ((addr->ifa_flags & IFF_BROADCAST) && addr->ifa_broadaddr && addr->ifa_broadaddr->sa_family == AF_INET)
-    {
-      // Copy this IPv4 broadcast address...
-      if ((current = calloc(1, sizeof(http_addrlist_t))) != NULL)
-      {
-	memcpy(&(current->addr), addr->ifa_broadaddr, sizeof(struct sockaddr_in));
-
-	if (!last)
-	  first = current;
-	else
-	  last->next = current;
-
-	last = current;
-      }
-    }
-  }
-
-  // Free the original interface addresses and return...
-  freeifaddrs(addrs);
-
-  return (first);
-#endif // _WIN32
+  return (NULL);			// TODO: Implement WinSock equivalents (and zephyr equivalents)
 }
 
 

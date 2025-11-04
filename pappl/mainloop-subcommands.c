@@ -625,10 +625,10 @@ _papplMainloopRunServer(
     snprintf(filename, sizeof(filename), "/Library/Application Support/%s.conf", base_name);
 
 #else
-    snprintf(filename, sizeof(filename), "/usr/local/etc/%s.conf", base_name);
+    snprintf(filename, sizeof(filename), "/lfs/usr/local/etc/%s.conf", base_name);
     num_options = load_options(filename, num_options, options);
 
-    snprintf(filename, sizeof(filename), "/etc/%s.conf", base_name);
+    snprintf(filename, sizeof(filename), "/lfs/etc/%s.conf", base_name);
 #endif // __APPLE__
 
     num_options = load_options(filename, num_options, options);

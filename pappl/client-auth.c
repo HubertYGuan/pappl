@@ -158,61 +158,10 @@ _papplClientIsAuthorizedForGroup(
 	  if (!group || !*group)
 	    return (HTTP_STATUS_CONTINUE);
 
-#if _WIN32
-	  // No groups in stock Windows support...
+	  // No groups in stock Windows (and Zephyr) support...
           return (HTTP_STATUS_CONTINUE);
 
-#else
-	  // Get the user information (groups, etc.)
-	  if (!getpwnam_r(username, &udata, ubuffer, sizeof(ubuffer), &user) && user)
-	  {
-	    papplLogClient(client, PAPPL_LOGLEVEL_INFO, "Authenticated as \"%s\" using Basic.", username);
-	    cupsCopyString(client->username, username, sizeof(client->username));
 
-	    num_groups = (int)(sizeof(groups) / sizeof(groups[0]));
-
-#  ifdef __APPLE__
-	    if (getgrouplist(username, (int)user->pw_gid, groups, &num_groups) < 0)
-#  else
-	    if (getgrouplist(username, user->pw_gid, groups, &num_groups) < 0)
-#  endif // __APPLE__
-	    {
-	      papplLogClient(client, PAPPL_LOGLEVEL_WARN, "User '%s' is in more than %d groups.", username, (int)(sizeof(groups) / sizeof(groups[0])));
-#  ifdef __GLIBC__
-	      num_groups = (int)(sizeof(groups) / sizeof(groups[0]));
-#  endif // __GLIBC__
-	    }
-
-            // Check group membership...
-            if (groupid != (gid_t)-1)
-            {
-              if (user->pw_gid != groupid)
-              {
-                int i;			// Looping var
-
-                for (i = 0; i < num_groups; i ++)
-		{
-		  if ((gid_t)groups[i] == groupid)
-		    break;
-		}
-
-                if (i >= num_groups)
-                {
-                  // Not in the admin group, access is forbidden...
-                  return (HTTP_STATUS_FORBIDDEN);
-		}
-              }
-            }
-
-            // If we get this far, authentication and authorization are good...
-            return (HTTP_STATUS_CONTINUE);
-	  }
-	  else
-	  {
-	    papplLogClient(client, PAPPL_LOGLEVEL_ERROR, "Unable to lookup user '%s'.", username);
-	    return (HTTP_STATUS_SERVER_ERROR);
-	  }
-#endif // _WIN32
 	}
 	else
 	{

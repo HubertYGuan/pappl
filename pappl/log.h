@@ -14,6 +14,8 @@
 extern "C" {
 #  endif // __cplusplus
 
+#include <zephyr/logging/log.h>
+LOG_MODULE_DECLARE(pappl);
 
 //
 // Constants...
@@ -33,12 +35,11 @@ typedef enum pappl_loglevel_e		// Log levels
 //
 // Functions...
 //
-
 extern void		papplLog(pappl_system_t *system, pappl_loglevel_t level, const char *message, ...) _PAPPL_PUBLIC _PAPPL_FORMAT(3,4);
-extern void		papplLogClient(pappl_client_t *client, pappl_loglevel_t level, const char *message, ...) _PAPPL_PUBLIC _PAPPL_FORMAT(3, 4);
-extern void		papplLogDevice(void *data, const char *message) _PAPPL_PUBLIC;
-extern void		papplLogJob(pappl_job_t *job, pappl_loglevel_t level, const char *message, ...) _PAPPL_PUBLIC _PAPPL_FORMAT(3, 4);
-extern void		papplLogPrinter(pappl_printer_t *printer, pappl_loglevel_t level, const char *message, ...) _PAPPL_PUBLIC _PAPPL_FORMAT(3, 4);
+#define papplLogClient papplLog
+#define papplLogDevice papplLog
+#define papplLogJob papplLog
+#define papplLogPrinter papplLog
 
 
 #  ifdef __cplusplus
